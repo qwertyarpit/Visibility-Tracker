@@ -77,7 +77,7 @@ Although a fully working implementation could not be completed due to AI access 
 
 ## Setup & Running locally
 
-1.  **Clone the repository**.
+1.  **Clone the repository**. ```bash https://github.com/qwertyarpit/Visibility-Tracker.git   ```
 2.  **Install dependencies**:
     ```bash
     npm install
