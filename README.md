@@ -1,15 +1,79 @@
-# AI Visibility Tracker
+## THOUGHT PROCESS
 
-The **AI Visibility Tracker** helps brands understand their presence in AI Search results (specifically ChatGPT). It automates the process of querying AI models, analyzing the responses for brand mentions, sentiment, and rank, and visualizing the data in a premium dashboard.
+The objective of this project was to measure **AI search visibility** which is how frequently and in what context brands appear in AI-generated answers for a given category.
 
-## Features
+I approached the problem from a **product-first perspective**, focusing on accuracy, explainability, and real-world constraints rather than only implementation.
 
-- **Automated Prompt Generation**: Uses Gemini to generate relevant search queries for a category (e.g., "Best CRM for startups").
-- **Real-time ChatGPT Scraping**: Uses Playwright to query ChatGPT and capture responses.
-- **AI Analysis**: Uses Gemini to analyze the scraped text for brand mentions, sentiment (Positive/Neutral/Negative), and ranking context.
-- **Competitor Impersonation**: Pivot the dashboard to view data from the perspective of any tracked brand.
-- **Citation Tracking**: Extracts and lists cited links from AI responses.
-- **Premium UI**: Built with Next.js, Tailwind CSS, and Shadcn UI for a modern, dark-mode analytic experience.
+---
+
+### Input Validation
+
+The user inputs the **category and a list of brands**, which would first be sent to an LLM to ensure brands and category matches, if the match confidence was low, the user would be warned that the resulting visibility metrics may be inaccurate.
+
+---
+
+### Prompt Generation
+
+The system automatically generates **five relevant prompts** for the given category using an LLM, while still allowing users to add or modify prompts manually.
+
+---
+
+### AI Response Collection (Design Choice)
+
+- To capture **exact user-facing AI answers**, my preferred approach was to query ChatGPT via the **web UI** and use **Playwright** to scrape the rendered HTML including visible text, anchor tags, and structural elements.  
+- Rather than directly counting occurrences in Playwright, this extracted HTML was sent to an LLM for contextual analysis, as simple counting can misinterpret meaning,or contextual references and lead to inaccurate visibility metrics.  
+- This approach was chosen to closely mirror real user-visible responses while avoiding discrepancies between API outputs and UI behavior.
+
+
+---
+
+### Visibility Metrics & Ranking Logic
+
+From each AI response, I'd extract brand mentions, citation counts, sentiment, and a short **“Why” clause** explaining brand–category association, with rankings computed using a weighted score where citations carry higher importance as an authority signal.
+
+---
+
+### Competitor Impersonation Mode
+
+Competitor Impersonation Mode was designed as a **view-layer abstraction**, allowing the same visibility metrics to be analyzed from a selected competitor’s perspective without changing the underlying computation.
+
+---
+
+## PROBLEMS FACED & CONSTRAINTS
+
+Despite having a clear system design, I encountered multiple **practical constraints** related to accessing AI-generated responses.
+
+---
+
+### 1. Crawling ChatGPT Web UI
+
+- I Attempted to scrape ChatGPT using Playwright but ecountered repeated blocking, CAPTCHA challenges, and request throttling as the ChatGPT's UI was heavily protected against automated access
+
+---
+
+### 2. Alternative AI Platforms
+
+Then I explored multiple options:
+
+- **Gemini**
+  - Blocked at the login / authentication screen during automation
+- **DeepSeek**
+  - Similar bot-detection and login issues
+- **Direct API querying instead of crawling**
+  - Gemini API rate limits got exhausted during testing
+
+---
+
+## What I Would Improve With More Time
+
+- Using crawlers other than playwright like Cypress
+- Use LLM APIs with higher or extended rate limits
+  
+---
+
+## Final Note
+
+Although a fully working implementation could not be completed due to AI access and rate-limit constraints, this README captures my end-to-end product thinking, system design decisions, and approach to handling real-world limitations.
 
 ## Setup & Running locally
 
@@ -35,61 +99,3 @@ The **AI Visibility Tracker** helps brands understand their presence in AI Searc
     -   Click **Generate Prompts**.
     -   Click **Run Visibility Scan**.
     -   *Note*: A browser window will open (Playwright). If ChatGPT asks for login/CAPTCHA, please handle it manually in that window. The script waits for the chat input to be ready.
-
-## Key Engineering Decisions
-
--   **Next.js App Router**: Chosen for its robust server actions and efficient rendering.
--   **Playwright (Headful)**: We deliberately use `headless: false` for the scraper. ChatGPT has strict anti-bot measures. Running in headful mode allows for manual intervention (solving CAPTCHAs, logging in) which is critical for a dependable demo without complex stealth engineered proxies.
--   **Gemini for Analysis**: Used for both generating realistic user prompts and analyzing the unstructured output from ChatGPT. It's fast and effective at named entity recognition and sentiment classification.
--   **Client-Side State for Demo**: To keep the architecture simple for this challenge, the scan state is held in the client. In a production app, this would be persisted to a database (Postgres).
-      
-## System Workflow & Thought Process
-
-We designed a sophisticated pipeline to transform raw user input into actionable brand intelligence. Here is the logic flow of the application:
-
-### 1. Intelligent Input Validation
-The process begins with the user entering a **Category** (e.g., "CRM") and a list of **Brands** (e.g., "Salesforce, HubSpot").
--   **Consistency Check**: We verify via LLM if the brands actually operate within the specified category.
--   **User Feedback**: If there's a mismatch (e.g., Category: "Shoes", Brand: "Coca-Cola"), the system flags it, warning that results may be irrelevant.
-
-### 2. Strategic Prompt Generation
-Blindly searching for a brand name yields poor results. We generate high-intent search queries to mimic real user behavior.
--   **LLM Generation**: The system uses Gemini to create 5 distinct prompts based on the category (e.g., "Best affordable CRM for startups", "Top 5 enterprise CRM with AI features").
--   **User Control**: The user can review these prompts, select the best ones, or write their own custom queries to target specific market segments.
-
-### 3. Hybrid Data Extraction (Playwright)
-Once prompts are selected, we initiate the scraping phase.
--   **Real-time Interaction**: We use Playwright to automate a browser session, sending each prompt to ChatGPT.
--   **Rich DOM Extraction**: Instead of just grabbing text, we extract the full HTML structure, isolating anchor tags and citation links to understand exactly *where* and *how* a brand is mentioned.
-
-### 4. Deep Analysis & Scoring (Gemini)
-The raw HTML is passed to our analysis layer for deep inspection.
--   **Share of Voice**: We calculate the word count dedicated to each brand relative to the total response length.
--   **Citation Tracking**: We map every citation back to its source URL, verifying the credibility of the monitoring.
--   **Sentiment Engine**: We go beyond simple "Positive/Negative" labels. We analyze the context to determine *why* a brand was ranked highly (e.g., "Praised for pricing" vs "Praised for features").
--   **Competitor Analysis**: The final report compares your brand directly against competitors, highlighting gaps in visibility.
-
-## Challenges & Technical Roadblocks
-
-This project represents a deep dive into the adversarial nature of modern AI platform scraping. While the core "Visibility Tracker" concept is solid, obtaining reliable, automated access to the outputs of major AI models (ChatGPT, Gemini, DeepSeek) proved to be an immense technical hurdle.
-
-### ChatGPT Integration Attempts
-We dedicated significant engineering effort to building a robust scraper for ChatGPT using Playwright.
--   **Cloudflare & Bot Detection**: OpenAI employs aggressive Cloudflare protections. We experimented with `puppeteer-extra-plugin-stealth` and various browser fingerprinting evasion techniques, but the "Verify you are human" challenge persisted.
--   **CAPTCHAs**: We frequently encountered Arkose Labs CAPTCHAs that are extremely difficult to solve automatically. We attempted to integrate 2Captcha and similar services but found the latency introduced made the real-time dashboard unusable.
--   **Dynamic DOM**: The ChatGPT interface is heavily obfuscated (randomized class names) and changes frequently, requiring constant maintenance of the scraper selectors.
-
-### Gemini & DeepSeek Research
-We explored integrating Gemini and DeepSeek to provide a multi-model perspective.
--   **Gemini Web Scraping**: We attempted to replicate the ChatGPT scraping approach for Gemini's web interface. However, Google's anti-bot measures (checking Google account headers and integrity tokens) proved even more difficult to bypass reliably than Cloudflare.
--   **DeepSeek API vs Web**: DeepSeek's API was investigated, but at the time of development, it lacked specific "web search" capabilities required to simulate a user researching a brand. Structuring the prompts to get consistent "brand visibility" metrics without live web access was a major limitation.
-
-**Conclusion**: After weeks of trial and error with headless browsers and stealth plugins, we decided that the **"Headful" Playwright approach** is the most pragmatic compromise. It trades pure background automation for reliability, asking the user to handle the initial "human" verification so the application can focus on the analysis and dashboarding values.
-
-## Future Improvements
-
--   **Authentication Persistence**: Save browser context (cookies/local storage) to avoid logging in on every run.
--   **Database Integration**: Store historical scan data to track visibility trends over time.
--   **Headless Stealth Mode**: Implement stealth plugins to run completely in the background.
--   **Multi-Model Support**: Extend scraping to Perplexity, Claude, and Gemini (the web UI).
--   **Detailed Sentiment Scoring**: Move beyond simple Positive/Negative to detailed attribute scoring (e.g., "Pricing", "Features", "Support").
